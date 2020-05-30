@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Asyn Web App</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+	<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+</head>
+<body class="monospace" style="padding-top: 5em;">
+
+	<center>
+		<div id="input" style="width: 20em;height: 3em;border:2px solid black;text-align: center;border-radius: 10px;padding-top: 0.5em;" contenteditable="true">Enter Equation Here..</div>
+
+	<button id="getMessage" class="btn btn-success" style="margin-top: 1em">Submit Equation</button>
+
+	<div style="width:50em;padding-top: 2em;">
+		<table class="monospace" id="customers">
+		<thead><tr><th title="Field #1">Question</th>
+		<th title="Field #2">Solution</th>
+		<th title="Field #3"></th>
+		</tr></thead>
+		<tbody id="sent_table">
+
+
+		</tbody>
+	</table>
+	</div>
+	</center>
+
+<div style="visibility: hidden;" id="csrf">{{csrf_token}}</div>
+</body>
+
+<style>
+	.monospace { font-family: "Lucida Console", Courier, monospace;}
+	#customers {
+  font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#customers td, #customers th {
+  border: 1px solid #ddd;
+  padding: 8px;
+  font-size: 1.2em;
+  text-align: center;
+}
+
+#customers tr:nth-child(even){background-color: #f2f2f2;}
+
+#customers tr:hover {background-color: #ddd;color: black;}
+
+#customers th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: center;
+  background-color: white;
+  color: black;
+}
+</style>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script>
+
+		var csrf_token = document.getElementById("csrf").innerHTML;
+
+		var endpoint = 'ws://' + window.location.host + window.location.pathname
+		var socket = new WebSocket(endpoint)
+
+		var getMessage = $("#getMessage")
+
+		// listen for data from server
+		socket.onmessage = function(e){
+			var data = JSON.parse(e['data']);
+			length = Object.keys(data).length
+
+			var ele = document.getElementById("sent_table");
+		    ele.innerHTML = "";
+		      for(var i=0;i<length;i++)
+			    {
+			      var content = ele.innerHTML;
+			      id = i+1
+			      var temp = '  <tr>\
+			          <td align="left">'+data[id]["ques"]+'</td>\
+			          <td id="'+id+'" align="center" contenteditable="true" >'+data[id]["ans"]+'</td>\
+			          <td align="center"><button onclick="Update('+id+')" class="btn btn-primary">Update</button></td>\
+			        </tr>';
+			      content = content+temp;
+			      ele.innerHTML = content;
+			    }
+		  }
+
+		// send data from client to server
+		socket.onopen = function(e){
+			console.log("open",e);
+
+			getMessage.on("click",function(event){
+				event.preventDefault()
+				var input = document.getElementById("input").innerHTML;
+				var info = {'message':input};
+				var data = {
+					type: "websocket_receive_ques",
+					text: info,
+					csrfmiddlewaretoken: csrf_token
+				};
+				socket.send(JSON.stringify(data))
+			})
+
+
+
+
+		}
+		// onerror
+		socket.onerror = function(e) {
+
+			console.log("error",e);
+		}
+
+		//onclose
+		socket.onclose = function(e) {
+
+			console.log("closed",e);
+		}
+
+		function Update(id) {
+
+			input = document.getElementById(id.toString()).innerHTML;
+			var info = {'id':id,'message':input};
+			var data = {
+					type: "websocket_receive_ans",
+					text: info,
+					csrfmiddlewaretoken: csrf_token
+				};
+
+			socket.send(JSON.stringify(data))
+		}
+
+</script>
+
+</html>
